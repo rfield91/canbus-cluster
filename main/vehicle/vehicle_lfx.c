@@ -49,13 +49,13 @@ const obd_pid_t VEHICLE_PIDS[] = {
 
 const int VEHICLE_PID_COUNT = sizeof VEHICLE_PIDS / sizeof VEHICLE_PIDS[0];
 
-// AY6 ratios from GM's MV5 spec sheet. Final drive is the RX-8 diff. Tire is
-// 225/45R18: 18 + 2 * 225 * 0.45 / 25.4 = 25.97 in. Change it if the tires
+// AY6 ratios from GM's MV5 spec sheet. Final drive is the Ford 8.8 Diff. Tire is
+// 295/30R18: 18 + 2 * 295 * 0.30 / 25.4 = 24.96 in. Change it if the tires
 // change. If the indicator shows "-" in a gear at steady speed, compare
 // rpm/mph from the log with gear.h's table before touching these.
 const drivetrain_t VEHICLE_DRIVETRAIN = {
     .n_gears          = 6,
     .ratio            = { 4.475f, 2.577f, 1.683f, 1.194f, 1.000f, 0.752f },
     .final_drive      = 3.08f,
-    .tire_diameter_in = 25.00f,
+    .tire_diameter_in = 24.96f,
 };

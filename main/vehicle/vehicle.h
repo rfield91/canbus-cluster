@@ -54,5 +54,5 @@ typedef struct {
 extern const drivetrain_t VEHICLE_DRIVETRAIN;
 
 // ---- display -----------------------------------------------------------------
-#define VEHICLE_RPM_MAX    8000   // tach full scale, a multiple of 1000
-#define VEHICLE_SHIFT_RPM  7400   // the bar blinks from here
+#define VEHICLE_RPM_MAX    7600   // tach full scale
+#define VEHICLE_SHIFT_RPM  7200   // the bar blinks from here

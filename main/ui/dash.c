@@ -66,7 +66,8 @@ static const tile_def_t TILES[] = {
 #define BAR_W       760
 #define BAR_H        54
 
-#define BIG_Y       118    // MPH and gear digits
+#define BIG_CY      240    // MPH and gear digits: centred on the screen
+#define CAPTION_GAP  16    // digits to the caption under them
 #define MPH_CX      230    // centre lines of the two big numbers
 #define GEAR_CX     570
 
@@ -227,12 +228,15 @@ static void build_rpm_bar(void)
     lv_obj_set_style_bg_color(rl, lv_color_hex(C_RED), 0);
     lv_obj_set_style_bg_opa(rl, LV_OPA_COVER, 0);
 
-    int last = VEHICLE_RPM_MAX / 1000;
-    for (int k = 0; k <= last; k++) {
+    // A label every 1000 rpm, at its true place on the bar, so the full scale
+    // need not be a round thousand.
+    for (int k = 0; k * 1000 <= VEHICLE_RPM_MAX; k++) {
         char t[4];
         snprintf(t, sizeof t, "%d", k);
         lv_obj_t *l = ui_label(s_dash, t, &lv_font_montserrat_20, C_MUTED);
-        lv_obj_set_pos(l, BAR_X + BAR_W * k / last - (k == last ? 12 : 5), BAR_Y + BAR_H + 8);
+        int x = BAR_X + BAR_W * k * 1000 / VEHICLE_RPM_MAX - 5;
+        if (x > BAR_X + BAR_W - 12) x = BAR_X + BAR_W - 12;   // keep on screen
+        lv_obj_set_pos(l, x, BAR_Y + BAR_H + 8);
     }
 
     // Over the bar, which is empty anyway when the car is not answering.
@@ -244,9 +248,12 @@ static void build_rpm_bar(void)
 static lv_obj_t *big_number(const char *caption, int cx)
 {
     lv_obj_t *v = ui_label(s_dash, "--", &ui_font_rpm_96, C_WHITE);
-    lv_obj_align(v, LV_ALIGN_TOP_MID, cx - 400, BIG_Y);
+    lv_obj_align(v, LV_ALIGN_CENTER, cx - 400, BIG_CY - 240);
+    // Placed from the font's height rather than the label's, which is not
+    // laid out yet.
     lv_obj_t *c = ui_label(s_dash, caption, &lv_font_montserrat_20, C_MUTED);
-    lv_obj_align(c, LV_ALIGN_TOP_MID, cx - 400, BIG_Y + 104);
+    lv_obj_align(c, LV_ALIGN_TOP_MID, cx - 400,
+                 BIG_CY + ui_font_rpm_96.line_height / 2 + CAPTION_GAP);
     return v;
 }
 
