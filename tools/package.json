@@ -1,0 +1,14 @@
+{
+  "name": "canbus-cluster-tools",
+  "private": true,
+  "type": "module",
+  "description": "Asset generators: LVGL fonts and the boot image",
+  "scripts": {
+    "fonts": "node fonts.mjs",
+    "image": "node image.mjs"
+  },
+  "devDependencies": {
+    "lv_font_conv": "1.5.2",
+    "sharp": "0.33.5"
+  }
+}

@@ -4,3 +4,4 @@
 .DS_Store
 sdkconfig.old
 .vscode/
+/tools/node_modules/
