@@ -73,12 +73,14 @@ static void demo_task(void *arg)
         float volts    = 14.1f + sinf(t * 0.3f) * 0.15f;
 
 #if CONFIG_DASH_DEMO_EXERCISE_WARNINGS
-        switch ((int)(t / WARN_SEC) % 6) {
-            case 1: coolant  = 255.0f; break;
-            case 2: oil_temp = 300.0f; break;
-            case 3: oil_psi  = 5.0f;   break;
-            case 4: iat      = 185.0f; break;
-            case 5: volts    = 11.8f;  break;
+        // The first ~20s of warm-up also show the cold (blue) state.
+        switch ((int)(t / WARN_SEC) % 7) {
+            case 1: coolant  = 236.0f; break;   // warn
+            case 2: coolant  = 255.0f; break;   // alarm and takeover
+            case 3: oil_psi  = 5.0f;   break;   // alarm and takeover
+            case 4: iat      = 158.0f; break;   // warn
+            case 5: volts    = 11.6f;  break;   // alarm, no takeover
+            case 6: oil_temp = 300.0f; break;   // alarm and takeover
             default: break;                     // all in range
         }
 #endif

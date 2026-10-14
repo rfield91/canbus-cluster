@@ -1,5 +1,5 @@
-// The main page: RPM bar across the top, MPH and gear in the middle, and a
-// row of tiles along the bottom. Which readings get a tile, and their warning
+// The main page: a shift-light tach strip across the top, MPH and RPM in the
+// middle, and a row of readings along the bottom. Which readings, and their
 // limits, are in the TILES table at the top of dash.c.
 #pragma once
 
@@ -15,7 +15,7 @@
 // One update's worth of everything the dash and min/max pages show.
 typedef struct {
     float   v[SIG_COUNT];   // NAN = no reading
-    float   rpm_bar;        // smoothed RPM, for the bar
+    float   rpm_smooth;     // smoothed RPM, for the tach
     int     gear;           // 1..n, 0 = no gear
     bool    no_can;         // the car is not answering
     int64_t run_ms;         // how long the engine has been turning, 0 if stopped

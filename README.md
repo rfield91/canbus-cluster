@@ -19,11 +19,13 @@ Commercial use is NOT permitted.
 
 Swipe left/right between them.
 
-1. **Dash**: RPM bar with a shift light, MPH, the engaged gear (worked out from
-   RPM against speed), and tiles for coolant, oil temp, oil pressure, intake air
-   temp and battery voltage. A tile flashes red when its reading is out of range.
-   Low oil pressure, high coolant temp and high oil temp also take over the whole
-   screen until you tap it.
+1. **Dash**: a shift-light tach strip (green, then amber from 6000 rpm, then
+   red and flashing at the 7200 rpm shift point), MPH, digital RPM with the
+   engaged gear (worked out from RPM against speed), and readings for coolant,
+   oil temp, oil pressure, intake air temp and battery voltage. A reading turns
+   blue while cold, amber at its warning limit and flashes red at its alarm
+   limit. Low oil pressure, high coolant temp and high oil temp also take over
+   the whole screen until they recover or you tap it.
 2. **Min / Max**: the lowest and highest values for this drive and the last one.
 3. **Trouble codes**: read and clear.
 
@@ -60,6 +62,18 @@ Swipe left/right between them.
 | `main/ui/`      | Pages. Which readings get a tile, and their warning limits, are in the `TILES` table at the top of [dash.c](main/ui/dash.c)                                                                                                                                             |
 | `main/board/`   | LCD, touch, LVGL port, and the CH422G I/O expander                                                                                                                                                                                                                      |
 | `main/demo/`    | The bench simulator                                                                                                                                                                                                                                                     |
+
+## Fonts and boot image
+
+Both are generated C files; don't edit them by hand. The generators need
+Node.js:
+
+```bash
+cd tools
+npm install
+npm run image   # assets/boot.jpg -> main/ui/images/boot_logo.c
+npm run fonts   # -> main/ui/fonts/*.c (run a build first, for the TTF)
+```
 
 ## Fitting it to the car
 

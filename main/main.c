@@ -53,7 +53,7 @@ static const char *TAG = "MAIN";
 #if !CONFIG_DASH_MODE_PID_SCAN
 static void update_cb(lv_timer_t *t)
 {
-    static float   rpm_bar;
+    static float   rpm_smooth;
     static int64_t running_since;
     int64_t now_ms = esp_timer_get_time() / 1000;
 
@@ -67,8 +67,8 @@ static void update_cb(lv_timer_t *t)
     else if (!running_since) running_since = now_ms;
     f.run_ms = running ? now_ms - running_since : 0;
 
-    rpm_bar += RPM_SMOOTHING * ((isnan(rpm) ? 0.0f : rpm) - rpm_bar);
-    f.rpm_bar = rpm_bar;
+    rpm_smooth += RPM_SMOOTHING * ((isnan(rpm) ? 0.0f : rpm) - rpm_smooth);
+    f.rpm_smooth = rpm_smooth;
     f.gear    = gear_update(rpm, f.v[SIG_SPEED], now_ms);
 #if CONFIG_DASH_MODE_CAR
     f.no_can  = esp_timer_get_time() - can_bus_last_reply_us() > NO_CAN_AFTER_US;

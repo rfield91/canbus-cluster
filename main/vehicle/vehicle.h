@@ -55,4 +55,5 @@ extern const drivetrain_t VEHICLE_DRIVETRAIN;
 
 // ---- display -----------------------------------------------------------------
 #define VEHICLE_RPM_MAX    7600   // tach full scale
-#define VEHICLE_SHIFT_RPM  7200   // the bar blinks from here
+#define VEHICLE_WARN_RPM   6000   // the tach turns amber from here
+#define VEHICLE_SHIFT_RPM  7200   // red from here, and the strip flashes
