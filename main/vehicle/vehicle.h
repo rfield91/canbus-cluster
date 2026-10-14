@@ -1,5 +1,5 @@
 // Everything specific to the car: which PIDs to ask for and how to read them,
-// and the drivetrain the gear indicator works from.
+// and the drivetrain (which the bench demo simulates).
 //
 // The rest of the firmware only knows signals (signals.h). To fit the dash to
 // a different car, write another vehicle_*.c that defines the symbols below
@@ -41,7 +41,7 @@ typedef struct {
 extern const obd_pid_t VEHICLE_PIDS[];
 extern const int       VEHICLE_PID_COUNT;
 
-// ---- drivetrain, for the gear indicator --------------------------------------
+// ---- drivetrain, for the demo's simulated drive --------------------------------
 #define VEHICLE_MAX_GEARS 8
 
 typedef struct {

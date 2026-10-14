@@ -16,7 +16,6 @@
 typedef struct {
     float   v[SIG_COUNT];   // NAN = no reading
     float   rpm_smooth;     // smoothed RPM, for the tach
-    int     gear;           // 1..n, 0 = no gear
     bool    no_can;         // the car is not answering
     int64_t run_ms;         // how long the engine has been turning, 0 if stopped
 } dash_frame_t;

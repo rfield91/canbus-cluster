@@ -27,7 +27,6 @@ const TEXT = [[0x20, 0x7E], [0xB0, 0xB0], [0xB7, 0xB7]];  // ASCII ° ·
 
 const FONTS = [
     { name: 'font_speed_150', size: 150, ranges: NUMERIC, tabular: true },
-    { name: 'font_rpm_84',    size: 84,  ranges: NUMERIC, tabular: true },
     { name: 'font_value_46',  size: 46,  ranges: NUMERIC, tabular: true },
     { name: 'font_text_18',   size: 18,  ranges: TEXT,    tabular: false },
 ];

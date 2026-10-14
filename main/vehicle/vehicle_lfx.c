@@ -19,8 +19,7 @@ const obd_pid_t VEHICLE_PIDS[] = {
     // Engine RPM, (256A + B) / 4. The fastest-moving value on the dash.
     { OBD_MODE_01, 0x0C, 2, 0.25f, 0.0f, 100, SIG_RPM },
 
-    // Vehicle speed, A km/h, folded to mph. Fresh speed matters as much as
-    // fresh RPM: the gear indicator divides one by the other.
+    // Vehicle speed, A km/h, folded to mph. The headline number on the dash.
     { OBD_MODE_01, 0x0D, 1, 0.621371f, 0.0f, 200, SIG_SPEED },
 
     // Coolant, A - 40 degC.
@@ -51,8 +50,7 @@ const int VEHICLE_PID_COUNT = sizeof VEHICLE_PIDS / sizeof VEHICLE_PIDS[0];
 
 // AY6 ratios from GM's MV5 spec sheet. Final drive is the Ford 8.8 Diff. Tire is
 // 295/30R18: 18 + 2 * 295 * 0.30 / 25.4 = 24.96 in. Change it if the tires
-// change. If the indicator shows "-" in a gear at steady speed, compare
-// rpm/mph from the log with gear.h's table before touching these.
+// change. Only the bench demo uses these, to turn its revs into road speed.
 const drivetrain_t VEHICLE_DRIVETRAIN = {
     .n_gears          = 6,
     .ratio            = { 4.475f, 2.577f, 1.683f, 1.194f, 1.000f, 0.752f },

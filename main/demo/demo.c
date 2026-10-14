@@ -1,6 +1,5 @@
 #include "demo.h"
 #include "signals.h"
-#include "gear.h"
 #include "vehicle.h"
 
 #include <math.h>
@@ -19,6 +18,14 @@
 #define IDLE_SEC      3.0f      // stopped, before and after each run
 #define COAST_SEC     8.0f      // clutch in, rolling to a stop
 #define WARN_SEC      10.0f     // per warning phase: long enough for the takeover
+
+// The rpm per mph in a gear (1-based): ratio * final drive * 1056 / (pi * tire
+// diameter in inches), 1056 being inches per mile over minutes per hour.
+static float gear_rpm_per_mph(int g)
+{
+    const drivetrain_t *d = &VEHICLE_DRIVETRAIN;
+    return d->ratio[g - 1] * d->final_drive * 1056.0f / ((float)M_PI * d->tire_diameter_in);
+}
 
 // One pull through the gears, then a coast to a stop.
 static void drive(float t, float *rpm, float *mph)

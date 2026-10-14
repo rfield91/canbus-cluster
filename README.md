@@ -20,11 +20,10 @@ Commercial use is NOT permitted.
 Swipe left/right between them.
 
 1. **Dash**: a shift-light tach strip (green, then amber from 6000 rpm, then
-   red and flashing at the 7200 rpm shift point), MPH, digital RPM with the
-   engaged gear (worked out from RPM against speed), and readings for coolant,
-   oil temp, oil pressure, intake air temp and battery voltage. A reading turns
-   blue while cold, amber at its warning limit and flashes red at its alarm
-   limit. Low oil pressure, high coolant temp and high oil temp also take over
+   red and flashing at the 7200 rpm shift point), MPH in the centre, and
+   readings for coolant, oil temp, oil pressure, intake air temp and battery
+   voltage. A reading's cell fills blue while cold, amber at its warning limit
+   and flashes red at its alarm limit. Low oil pressure, high coolant temp and high oil temp also take over
    the whole screen until they recover or you tap it.
 2. **Min / Max**: the lowest and highest values for this drive and the last one.
 3. **Trouble codes**: read and clear.
@@ -57,7 +56,7 @@ Swipe left/right between them.
 
 | Path            | What's there                                                                                                                                                                                                                                                            |
 | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `main/vehicle/` | **Everything car-specific.** The PIDs to poll and how to scale them, the gearing ([vehicle_lfx.c](main/vehicle/vehicle_lfx.c)), and the rev range ([vehicle.h](main/vehicle/vehicle.h)). Also the signal store the rest of the firmware reads from, and gear detection. |
+| `main/vehicle/` | **Everything car-specific.** The PIDs to poll and how to scale them, the gearing ([vehicle_lfx.c](main/vehicle/vehicle_lfx.c)), and the rev range ([vehicle.h](main/vehicle/vehicle.h)). Also the signal store the rest of the firmware reads from. |
 | `main/can/`     | TWAI driver, the OBD poller, the trouble-code reader, and the PID scanner                                                                                                                                                                                               |
 | `main/ui/`      | Pages. Which readings get a tile, and their warning limits, are in the `TILES` table at the top of [dash.c](main/ui/dash.c)                                                                                                                                             |
 | `main/board/`   | LCD, touch, LVGL port, and the CH422G I/O expander                                                                                                                                                                                                                      |
@@ -77,7 +76,7 @@ npm run fonts   # -> main/ui/fonts/*.c (run a build first, for the TTF)
 
 ## Fitting it to the car
 
-The mode 22 PIDs for oil temp and oil pressure, and the gear ratios, still need
-to be confirmed on the car. Check them against HP Tuners: turn on **Dash** →
+The mode 22 PIDs for oil temp and oil pressure still need to be confirmed on
+the car. Check them against HP Tuners: turn on **Dash** →
 **Log every OBD reply** in menuconfig, watch `idf.py monitor`, and compare. If a
 PID doesn't answer, use PID scan mode to find the right one.

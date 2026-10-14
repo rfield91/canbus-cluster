@@ -25,7 +25,6 @@
 #include "pid_scan.h"
 #include "signals.h"
 #include "vehicle.h"
-#include "gear.h"
 #include "dash.h"
 #include "nav.h"
 #include "minmax.h"
@@ -69,7 +68,6 @@ static void update_cb(lv_timer_t *t)
 
     rpm_smooth += RPM_SMOOTHING * ((isnan(rpm) ? 0.0f : rpm) - rpm_smooth);
     f.rpm_smooth = rpm_smooth;
-    f.gear    = gear_update(rpm, f.v[SIG_SPEED], now_ms);
 #if CONFIG_DASH_MODE_CAR
     f.no_can  = esp_timer_get_time() - can_bus_last_reply_us() > NO_CAN_AFTER_US;
 #else
@@ -105,7 +103,6 @@ void app_main(void)
 {
     nvs_init();
     signals_init();
-    gear_init(&VEHICLE_DRIVETRAIN);
     minmax_init();
 
     // CAN shares GPIO19/20 with native USB. Only switch them over when CAN

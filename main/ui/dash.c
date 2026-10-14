@@ -64,10 +64,10 @@ static const tile_def_t TILES[] = {
 #define SEG_GAP       5
 #define TICK_Y       56
 
-#define DIGITS_BASE 226          // bottom of the MPH and RPM digits
-#define CAPTION_Y   240
-#define BIG_X        40          // MPH from the left, RPM from the right
-#define HUNDREDS_GAP  6          // MPH hundreds digit ink to the tens cell; the
+// MPH sits centred in the space between the tach and the readings.
+#define DIGITS_BASE 240          // bottom of the MPH digits
+#define CAPTION_Y   254
+#define HUNDREDS_GAP  6          // MPH hundreds "1" ink to the tens cell; the
                                  // tens digit adds its own side bearing (~7 px)
 
 #define ROW_RULE_Y  338          // hairline above the readings
@@ -76,12 +76,15 @@ static const tile_def_t TILES[] = {
 
 #define WARN_FLASH_MS   450
 #define SHIFT_BLINK_MS  100      // the strip at the shift point
-#define RPM_STEP         50      // the digital RPM reads in these steps
+
+#define CELL_INSET        4      // a filled reading stops short of the hairlines
+#define CELL_RADIUS       8
 
 typedef struct {
-    lv_obj_t     *val;
+    lv_obj_t     *cell, *cap, *val, *unit;
     level_state_t state;
     level_t       level;
+    int           painted; // fill shown, -1 = never drawn
     bool          acked;   // takeover dismissed; re-arms when the alarm clears
     float         last;
 } tile_t;
@@ -90,10 +93,14 @@ static tile_t    s_t[N_TILES];
 static lv_obj_t *s_dash, *s_boot;
 static lv_obj_t *s_seg[N_SEG];
 static int       s_seg_state[N_SEG];          // colour shown, -1 = never drawn
-static lv_obj_t *s_mph, *s_mph_100, *s_rpm, *s_rpm_cap, *s_no_data;
+static lv_obj_t *s_no_data;
 static bool      s_flash, s_blink;
-static int       s_gear_shown = -1;
-static uint32_t  s_rpm_colour = C_WHITE;
+
+// MPH: one label per digit cell, hundreds first.
+static lv_obj_t *s_mph[3];
+static uint32_t  s_mph_col[3];
+static int       s_mph_x0;        // the hundreds cell
+static int       s_mph_one_x;     // where a hundreds "1" goes instead
 
 static lv_obj_t *s_to, *s_to_title, *s_to_val, *s_to_unit;
 static int       s_to_k = -1;           // tile index on the takeover, -1 none
@@ -105,14 +112,37 @@ static uint32_t rpm_colour(float rpm)
     return rpm >= VEHICLE_SHIFT_RPM ? C_RED : rpm >= VEHICLE_WARN_RPM ? C_AMBER : C_GREEN;
 }
 
-static uint32_t level_colour(level_t l)
+// The fill a reading's cell shows: 0 for none. An alarm flashes between red
+// and the normal look.
+static uint32_t level_fill(level_t l)
 {
     switch (l) {
         case LEVEL_COLD:  return C_BLUE;
         case LEVEL_WARN:  return C_AMBER;
-        case LEVEL_ALARM: return s_flash ? C_RED : C_WHITE;
-        default:          return C_WHITE;
+        case LEVEL_ALARM: return s_flash ? C_RED : 0;
+        default:          return 0;
     }
+}
+
+// The fill's own hue at a quarter brightness: dark enough to read on it, but
+// still visibly secondary to the black value.
+static uint32_t shade(uint32_t c)
+{
+    return (((c >> 16 & 0xFF) / 4) << 16) | (((c >> 8 & 0xFF) / 4) << 8) | ((c & 0xFF) / 4);
+}
+
+static void paint_tile(tile_t *t)
+{
+    int fill = (int)level_fill(t->level);
+    if (fill == t->painted) return;            // a style write redraws, even unchanged
+    t->painted = fill;
+    lv_obj_set_style_bg_opa(t->cell, fill ? LV_OPA_COVER : LV_OPA_TRANSP, 0);
+    if (fill) lv_obj_set_style_bg_color(t->cell, lv_color_hex(fill), 0);
+    // Every fill is bright, so black reads best on each: white on the blue
+    // would be under 3:1.
+    lv_obj_set_style_text_color(t->val,  lv_color_hex(fill ? C_INK : C_WHITE), 0);
+    lv_obj_set_style_text_color(t->cap,  lv_color_hex(fill ? shade(fill) : C_MUTED), 0);
+    lv_obj_set_style_text_color(t->unit, lv_color_hex(fill ? shade(fill) : C_MUTED), 0);
 }
 
 static lv_obj_t *rect(lv_obj_t *p, int x, int y, int w, int h, uint32_t colour)
@@ -183,24 +213,33 @@ static void build_tiles(void)
         int x = MARGIN + i * w;
         if (i) rect(s_dash, x, ROW_Y, 1, ROW_H, C_TILE_LINE);
 
-        lv_obj_t *c = caption(s_dash, TILES[i].caption);
-        lv_obj_set_pos(c, x + 16, ROW_Y + 14);
+        // The cell fills with the state colour; transparent while normal.
+        lv_obj_t *cell = rect(s_dash, x + CELL_INSET, ROW_Y, w - 2 * CELL_INSET, ROW_H, C_FACE);
+        lv_obj_set_style_bg_opa(cell, LV_OPA_TRANSP, 0);
+        lv_obj_set_style_radius(cell, CELL_RADIUS, 0);
+        lv_obj_clear_flag(cell, LV_OBJ_FLAG_SCROLLABLE);
+        int pad = 16 - CELL_INSET;
+
+        lv_obj_t *c = caption(cell, TILES[i].caption);
+        lv_obj_set_pos(c, pad, 14);
 
         // Value and unit share a bottom-aligned row, so the unit follows the
         // value as its width changes.
-        lv_obj_t *row = lv_obj_create(s_dash);
+        lv_obj_t *row = lv_obj_create(cell);
         lv_obj_remove_style_all(row);
         lv_obj_set_size(row, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
         lv_obj_set_flex_flow(row, LV_FLEX_FLOW_ROW);
         lv_obj_set_flex_align(row, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_END, LV_FLEX_ALIGN_END);
         lv_obj_set_style_pad_column(row, 5, 0);
-        lv_obj_align(row, LV_ALIGN_TOP_LEFT, x + 16, ROW_Y + ROW_H - 14 - 33);
+        lv_obj_align(row, LV_ALIGN_TOP_LEFT, pad, ROW_H - 14 - 33);
 
         lv_obj_t *v = ui_label(row, "--", &font_value_46, C_WHITE);
         lv_obj_t *u = ui_label(row, TILES[i].unit, &font_text_18, C_MUTED);
         lv_obj_set_style_pad_bottom(u, 2, 0);
 
-        s_t[i] = (tile_t){ .val = v, .last = NAN };
+        s_t[i] = (tile_t){ .cell = cell, .cap = c, .val = v, .unit = u,
+                           .painted = -1, .last = NAN };
+        paint_tile(&s_t[i]);
     }
 }
 
@@ -271,8 +310,7 @@ static void flash_cb(lv_timer_t *t)
     if (s_to_k >= 0)
         lv_obj_set_style_bg_color(s_to, lv_color_hex(s_flash ? C_RED : C_FACE), 0);
     for (int i = 0; i < N_TILES; i++)
-        if (s_t[i].level == LEVEL_ALARM)
-            lv_obj_set_style_text_color(s_t[i].val, lv_color_hex(level_colour(LEVEL_ALARM)), 0);
+        paint_tile(&s_t[i]);           // only alarms change with the flash
 }
 
 static void blink_cb(lv_timer_t *t) { s_blink = !s_blink; }
@@ -282,35 +320,27 @@ static void build_dash(void)
     s_dash = ui_screen();
     build_strip();
 
-    // MPH, left, in three fixed digit cells so nothing moves when it passes
-    // 100. Its digits sit on the same line as the RPM's.
+    // MPH, centred, always three digits: leading zeros are ghosted padding,
+    // so the number never moves as it gains or loses a digit.
     //
-    // Tens and units share one label, right-aligned in two cells. The
-    // hundreds digit is its own label: in a fixed-width cell a "1" sits
+    // A hundreds "1" is the exception to the fixed cells. In its cell it sits
     // centred with a wide gap either side, which in front of the tens reads
-    // as a hole. Placed by its ink instead, it gets ordinary letter spacing.
+    // as a hole; placed by its ink instead, it gets ordinary letter spacing.
     int y    = DIGITS_BASE - font_speed_150.line_height;
     int cell = lv_font_get_glyph_width(&font_speed_150, '0', 0);
-    int tens = BIG_X + cell;
-    s_mph = ui_label(s_dash, "--", &font_speed_150, C_WHITE);
-    lv_obj_set_width(s_mph, 2 * cell);
-    lv_obj_set_style_text_align(s_mph, LV_TEXT_ALIGN_RIGHT, 0);
-    lv_obj_set_pos(s_mph, tens, y);
-
+    s_mph_x0 = 400 - 3 * cell / 2;
+    for (int i = 0; i < 3; i++) {
+        s_mph[i] = ui_label(s_dash, "-", &font_speed_150, C_GHOST);
+        lv_obj_set_width(s_mph[i], cell);
+        lv_obj_set_style_text_align(s_mph[i], LV_TEXT_ALIGN_CENTER, 0);
+        lv_obj_set_pos(s_mph[i], s_mph_x0 + i * cell, y);
+        s_mph_col[i] = C_GHOST;
+    }
     lv_font_glyph_dsc_t one;
     lv_font_get_glyph_dsc(&font_speed_150, &one, '1', 0);
-    s_mph_100 = ui_label(s_dash, "1", &font_speed_150, C_WHITE);
-    lv_obj_set_pos(s_mph_100, tens - HUNDREDS_GAP - (one.ofs_x + one.box_w), y);
-    lv_obj_add_flag(s_mph_100, LV_OBJ_FLAG_HIDDEN);
+    s_mph_one_x = s_mph_x0 + cell - HUNDREDS_GAP - (one.ofs_x + one.box_w);
 
-    lv_obj_set_pos(caption(s_dash, "MPH"), BIG_X + 4, CAPTION_Y);
-
-    // RPM, right-aligned so the digits grow leftwards. Gear rides along in
-    // its caption: worth a glance, not a headline.
-    s_rpm = ui_label(s_dash, "--", &font_rpm_84, C_WHITE);
-    lv_obj_align(s_rpm, LV_ALIGN_TOP_RIGHT, -BIG_X, DIGITS_BASE - font_rpm_84.line_height);
-    s_rpm_cap = caption(s_dash, "RPM");
-    lv_obj_align(s_rpm_cap, LV_ALIGN_TOP_RIGHT, -BIG_X, CAPTION_Y);
+    lv_obj_align(caption(s_dash, "MPH"), LV_ALIGN_TOP_MID, 0, CAPTION_Y);
 
     build_tiles();
 
@@ -344,24 +374,32 @@ void dash_create(uint32_t boot_ms)
 }
 
 // ---- update ------------------------------------------------------------------
+static void set_digit(int i, char c, uint32_t col)
+{
+    char t[2] = { c, 0 };
+    ui_set_text_if(s_mph[i], t);
+    if (col != s_mph_col[i]) {           // a style write redraws, even unchanged
+        s_mph_col[i] = col;
+        lv_obj_set_style_text_color(s_mph[i], lv_color_hex(col), 0);
+    }
+}
+
 static void update_mph(float mph)
 {
-    char b[8];
+    char b[4] = "---";                   // no reading: three ghosted dashes
     int m = isnan(mph) ? -1 : (int)roundf(mph);
-    if (m < 0)        snprintf(b, sizeof b, "--");
-    else if (m < 100) snprintf(b, sizeof b, "%d", m);
-    else              snprintf(b, sizeof b, "%02d", m % 100);   // 105 -> "05"
-    ui_set_text_if(s_mph, b);
+    if (m > 999) m = 999;
+    if (m >= 0) snprintf(b, sizeof b, "%03d", m);
 
-    bool hundreds = m >= 100;
-    if (hundreds) {
-        snprintf(b, sizeof b, "%d", m / 100 % 10);
-        ui_set_text_if(s_mph_100, b);
+    // Leading zeros are padding. The units digit always counts, so standing
+    // still reads "00" ghosted and a white "0".
+    bool lead = m >= 0;
+    for (int i = 0; i < 3; i++) {
+        if (b[i] != '0' || i == 2) lead = false;
+        set_digit(i, b[i], (lead || m < 0) ? C_GHOST : C_WHITE);
     }
-    if (hundreds == lv_obj_has_flag(s_mph_100, LV_OBJ_FLAG_HIDDEN)) {
-        if (hundreds) lv_obj_clear_flag(s_mph_100, LV_OBJ_FLAG_HIDDEN);
-        else          lv_obj_add_flag(s_mph_100, LV_OBJ_FLAG_HIDDEN);
-    }
+    int x = b[0] == '1' ? s_mph_one_x : s_mph_x0;
+    if (lv_obj_get_x(s_mph[0]) != x) lv_obj_set_x(s_mph[0], x);
 }
 
 void dash_update(const dash_frame_t *f)
@@ -373,39 +411,16 @@ void dash_update(const dash_frame_t *f)
         else           lv_obj_add_flag(s_no_data, LV_OBJ_FLAG_HIDDEN);
     }
 
-    float rpm = f->rpm_smooth;
-    update_strip(rpm);
-
-    bool have_rpm = !isnan(f->v[SIG_RPM]);
-    float shown = roundf(rpm / RPM_STEP) * RPM_STEP;
-    ui_set_num(s_rpm, have_rpm ? shown : NAN, "%.0f");
-    uint32_t rc = !have_rpm || shown < VEHICLE_WARN_RPM ? C_WHITE : rpm_colour(shown);
-    if (rc != s_rpm_colour) {           // a style write redraws, even unchanged
-        s_rpm_colour = rc;
-        lv_obj_set_style_text_color(s_rpm, lv_color_hex(rc), 0);
-    }
-
-    float mph = f->v[SIG_SPEED];
-    update_mph(mph);
-
-    if (f->gear != s_gear_shown) {
-        s_gear_shown = f->gear;
-        char b[32];
-        if (f->gear > 0) snprintf(b, sizeof b, "RPM  ·  GEAR %d", f->gear);
-        else             snprintf(b, sizeof b, "RPM  ·  GEAR -");
-        lv_label_set_text(s_rpm_cap, b);
-    }
+    update_strip(f->rpm_smooth);
+    update_mph(f->v[SIG_SPEED]);
 
     bool running = f->run_ms >= DASH_ALARM_START_MS;
     for (int i = 0; i < N_TILES; i++) {
         float v = f->v[TILES[i].sig];
         s_t[i].last = v;
         ui_set_num(s_t[i].val, v, TILES[i].fmt);
-        level_t l = level_update(&s_t[i].state, &TILES[i].lim, v, running, now);
-        if (l != s_t[i].level) {
-            s_t[i].level = l;
-            lv_obj_set_style_text_color(s_t[i].val, lv_color_hex(level_colour(l)), 0);
-        }
+        s_t[i].level = level_update(&s_t[i].state, &TILES[i].lim, v, running, now);
+        paint_tile(&s_t[i]);
     }
 
     update_takeover(now);
